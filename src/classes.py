@@ -27,6 +27,9 @@ class Window:
         
     def draw_line(self, Line, fill_colour):
         Line.draw(self.__canvas, fill_colour)
+    
+    def draw_cell(self, Cell, fill_colour):
+        Cell.draw(self.__canvas, fill_colour)
 
 
 class Point:
@@ -42,3 +45,42 @@ class Line:
     def draw(self, Canvas, fill_colour):
         Canvas.create_line(self.p1.x, self.p1.y, self.p2.x, self.p2.y, fill=fill_colour, width=2)
 
+
+class Cell:
+    def __init__(self, point1, point2, window):  #Supply two point class entries (the points of two opposite corners) and a window class entity onto which the cell can be drawn
+        self.left_exists = True
+        self.right_exists = True
+        self.top_exists = True
+        self.bottom_exists = True
+        self.__x1 = point1.x
+        self.__y1 = point1.y    #Upper left point
+        self.__x2 = point2.x
+        self.__y2 = point2.y    #Lower right point
+        self.__win = window
+    
+    def draw(self, Canvas, fill_colour):
+        if self.left_exists:
+            Canvas.create_line(self.__x1, self.__y1, self.__x1, self.__y2, fill=fill_colour, width=2) #The idea is that things are drawn from the top left of the window towards the bottom right
+        if self.top_exists:
+            Canvas.create_line(self.__x1, self.__y1, self.__x2, self.__y1, fill=fill_colour, width=2)
+        if self.right_exists:
+            Canvas.create_line(self.__x2, self.__y1, self.__x2, self.__y2, fill=fill_colour, width=2)
+        if self.bottom_exists:
+            Canvas.create_line(self.__x2, self.__y2, self.__x1, self.__y2, fill=fill_colour, width=2)
+
+    def draw_move(self, to_cell, undo=False):
+        if undo:
+            fill_colour = "gray"
+        else:
+            fill_colour = "red"
+        
+        cell_center_x = (self.__x2 + self.__x1)/2
+        cell_center_y = (self.__y2 + self.__y1)/2
+        cell_center = Point(cell_center_x, cell_center_y)
+
+        to_cell_center_x = (to_cell.__x2 + to_cell.__x1)/2
+        to_cell_center_y = (to_cell.__y2 + to_cell.__y1)/2
+        to_cell_center = Point(to_cell_center_x, to_cell_center_y)
+
+        cell_to_cell_line = Line(cell_center, to_cell_center)
+        self.__win.draw_line(cell_to_cell_line, fill_colour)
