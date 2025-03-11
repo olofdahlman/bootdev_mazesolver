@@ -1,4 +1,4 @@
-#File for unit tests for the maze solver
+#File for unit tests for the maze solver - use "python tests.py" if you're running it in the terminal
 from classes import *
 import unittest
 

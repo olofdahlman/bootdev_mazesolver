@@ -1,4 +1,5 @@
 #Here go all the different classes for the maze solver
+#During the process, my own solutions often came up short, so the end result is close to the bootdev solutions
 from tkinter import Tk, BOTH, Canvas
 import time, random
 
@@ -116,6 +117,7 @@ class Cell:
         line = Line(Point(x_center, y_center), Point(x_center2, y_center2))
         self._win.draw_line(line, fill_color)
 
+
 class Maze:
     def __init__(
         self,
@@ -138,8 +140,6 @@ class Maze:
         self._win = win
         if seed:
             self._seed = random.seed(seed)
-        self._solve_path = {}
-        self._solve_path_found = False
 
         self._create_cells()
         self._break_entrance_and_exit()
@@ -227,54 +227,72 @@ class Maze:
     def solve(self):
         i = 0
         j = 0
-        self._solve_r(i, j)
-        if self._solve_path_found:
-            path_solved = []
-            path_solved.append([self._num_cols, self._num_rows])    #Immediately append the maze exit - has to be found if solve_path_found is True
-            while self._solve_path:
-                for cell in self._solve_path:   #This part is intended to iterate over the dictionary untill it finds the preceeding cell
-                    a = cell[:1]                #This will not work because the path can run right next to itself while still having a wall - add a wall-checking part
-                    b = cell[1:]
-                    if (a + 1 == path_solved[-1][0] or a - 1 == path_solved[-1][0]) ^ (b + 1 == path_solved[-1][1] or b - 1 == path_solved[-1][1]):
-                        path_solved.append(self._solve_path[cell])
-                        del self._solve_path[cell]
-            
+        return self._solve_r(i, j)
 
 
-        else:
-            return False
-        
+        # returns True if this is the end cell, OR if it leads to the end cell.
+    # returns False if this is a loser cell.
+    def _solve_r(self, i, j):
+        self._animate()
 
-    def _solve_r(self, i, j):       #This function should use the method-specific variables path_found and path to log the path travelled and if the end has been found
+        # vist the current cell
         self._cells[i][j].visited = True
-        if i == self._num_cols and j == self._num_rows:
-            self._solve_path_found = True       #If the end path is found, this will ensure the program stops checking and the path can processed in solve method
 
-        while not self._solve_path_found:
-            adjacent_cells = []
-            string = f"{i}" + f"{j}"    #Creating a unique key id from the two integers - due to the maze setup, they SHOULD be unique
-            self._solve_path.update({string : [i, j]})  #Use the unique key to store the corresponding cell list coordinate - the key allows them to be sorted later
-            if self._num_cols - 1 > i:                     #Could potentially just create a mirrored maze list by creating new cell class objects?
-                if self._cells[i + 1][j].visited == False and self._cells[i][j].has_right_wall == False:
-                    adjacent_cells.append([i + 1, j])
-            if 0 < i:
-                if self._cells[i - 1][j].visited == False and self._cells[i][j].has_left_wall == False:
-                    adjacent_cells.append([i - 1, j])
-            if self._num_rows - 1 > j:
-                if self._cells[i][j + 1].visited == False and self._cells[i][j].has_top_wall == False:
-                    adjacent_cells.append([i, j + 1])
-            if 0 < j:
-                if self._cells[i][j - 1].visited == False and self._cells[i][j].has_bottom_wall == False:
-                    adjacent_cells.append([i, j - 1])
+        # if we are at the end cell, we are done!
+        if i == self._num_cols - 1 and j == self._num_rows - 1:
+            return True
 
-            if not adjacent_cells:      #Designed so that dead-end cells self-filter themselves out of the final path
-                del self._solve_path[string]
+        # move left if there is no wall and it hasn't been visited
+        if (
+            i > 0
+            and not self._cells[i][j].has_left_wall
+            and not self._cells[i - 1][j].visited
+        ):
+            self._cells[i][j].draw_move(self._cells[i - 1][j])
+            if self._solve_r(i - 1, j):
+                return True
+            else:
+                self._cells[i][j].draw_move(self._cells[i - 1][j], True)
+
+        # move right if there is no wall and it hasn't been visited
+        if (
+            i < self._num_cols - 1
+            and not self._cells[i][j].has_right_wall
+            and not self._cells[i + 1][j].visited
+        ):
+            self._cells[i][j].draw_move(self._cells[i + 1][j])
+            if self._solve_r(i + 1, j):
+                return True
+            else:
+                self._cells[i][j].draw_move(self._cells[i + 1][j], True)
+
+        # move up if there is no wall and it hasn't been visited
+        if (
+            j > 0
+            and not self._cells[i][j].has_top_wall
+            and not self._cells[i][j - 1].visited
+        ):
+            self._cells[i][j].draw_move(self._cells[i][j - 1])
+            if self._solve_r(i, j - 1):
+                return True
+            else:
+                self._cells[i][j].draw_move(self._cells[i][j - 1], True)
+
+        # move down if there is no wall and it hasn't been visited
+        if (
+            j < self._num_rows - 1
+            and not self._cells[i][j].has_bottom_wall
+            and not self._cells[i][j + 1].visited
+        ):
+            self._cells[i][j].draw_move(self._cells[i][j + 1])
+            if self._solve_r(i, j + 1):
+                return True
+            else:
+                self._cells[i][j].draw_move(self._cells[i][j + 1], True)
+
+        # we went the wrong way let the previous cell know by returning False
+        return False
                 
-                return
-            
-            random_num = random.randrange(len(adjacent_cells))
-            random_dir = adjacent_cells[random_num]
-            self._solve_r(random_dir[0], random_dir[1])     #Same random cell selection and recursive method call as in the wall breaking method
 
 
 
