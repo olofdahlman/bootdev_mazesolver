@@ -1,6 +1,6 @@
 #Here go all the different classes for the maze solver
 from tkinter import Tk, BOTH, Canvas
-import time
+import time, random
 
 #Main class that creates the graphical user interface (GUI) for the solver and creates a canvas widget inside of it for drawing of maze lines
 class Window:
@@ -51,11 +51,12 @@ class Line:
 
 
 class Cell:
-    def __init__(self, win):
+    def __init__(self, win=None):
         self.has_left_wall = True
         self.has_right_wall = True
         self.has_top_wall = True
         self.has_bottom_wall = True
+        self.visited = False
         self._x1 = None
         self._x2 = None
         self._y1 = None
@@ -72,15 +73,27 @@ class Cell:
         if self.has_left_wall:
             line = Line(Point(x1, y1), Point(x1, y2))
             self._win.draw_line(line)
+        else:
+            line = Line(Point(x1, y1), Point(x1, y2))
+            self._win.draw_line(line, "white")
         if self.has_top_wall:
             line = Line(Point(x1, y1), Point(x2, y1))
             self._win.draw_line(line)
+        else:
+            line = Line(Point(x1, y1), Point(x2, y1))
+            self._win.draw_line(line, "white")
         if self.has_right_wall:
             line = Line(Point(x2, y1), Point(x2, y2))
             self._win.draw_line(line)
+        else:
+            line = Line(Point(x2, y1), Point(x2, y2))
+            self._win.draw_line(line, "white")
         if self.has_bottom_wall:
             line = Line(Point(x1, y2), Point(x2, y2))
             self._win.draw_line(line)
+        else:
+            line = Line(Point(x1, y2), Point(x2, y2))
+            self._win.draw_line(line, "white")
 
     def draw_move(self, to_cell, undo=False):
         half_length = abs(self._x2 - self._x1) // 2
@@ -107,7 +120,8 @@ class Maze:
         num_cols,
         cell_size_x,
         cell_size_y,
-        win,
+        win=None,
+        seed=None
     ):
         self._cells = []
         self._x1 = x1
@@ -117,8 +131,15 @@ class Maze:
         self._cell_size_x = cell_size_x
         self._cell_size_y = cell_size_y
         self._win = win
+        if seed:
+            self._seed = random.seed(seed)
+        self._solve_path = {}
+        self._solve_path_found = False
 
         self._create_cells()
+        self._break_entrance_and_exit()
+        self._break_walls_r(0, 0)
+        self._reset_cells_visited()
 
     def _create_cells(self):
         for i in range(self._num_cols):
@@ -144,4 +165,61 @@ class Maze:
         if self._win is None:
             return
         self._win.redraw()
-        time.sleep(0.05)
+        time.sleep(0.025)
+
+    def _break_entrance_and_exit(self):
+        self._cells[0][0].has_top_wall = False
+        self._draw_cell(0, 0)
+
+        self._cells[self._num_cols - 1][self._num_rows - 1].has_bottom_wall = False
+        self._draw_cell(self._num_cols - 1, self._num_rows - 1)
+
+    def _break_walls_r(self, i, j):
+        self._cells[i][j].visited = True
+
+        while True:
+            adjacent_cells = []
+            if self._num_cols - 1 > i:
+                if self._cells[i + 1][j].visited == False:
+                    adjacent_cells.append([i + 1, j])
+            if 0 < i:
+                if self._cells[i - 1][j].visited == False:
+                    adjacent_cells.append([i - 1, j])
+            if self._num_rows - 1 > j:
+                if self._cells[i][j + 1].visited == False:
+                    adjacent_cells.append([i, j + 1])
+            if 0 < j:
+                if self._cells[i][j - 1].visited == False:
+                    adjacent_cells.append([i, j - 1])
+
+            if not adjacent_cells:
+                self._draw_cell(i, j)
+                return
+
+            random_num = random.randrange(len(adjacent_cells))
+            random_dir = adjacent_cells[random_num]
+
+            if i + 1 == random_dir[0]:
+                self._cells[i][j].has_right_wall = False
+                self._cells[i + 1][j].has_left_wall = False
+            if i - 1 == random_dir[0]:
+                self._cells[i][j].has_left_wall = False
+                self._cells[i - 1][j].has_right_wall = False
+            if j + 1 == random_dir[1]:
+                self._cells[i][j].has_bottom_wall = False
+                self._cells[i][j + 1].has_top_wall = False
+            if j - 1 == random_dir[1]:
+                self._cells[i][j].has_top_wall = False
+                self._cells[i][j - 1].has_bottom_wall = False
+
+            self._break_walls_r(random_dir[0], random_dir[1])
+                
+    def _reset_cells_visited(self):
+        for i in range(self._num_cols):
+            for j in range(self._num_rows):
+                self._cells[i][j].visited = False
+
+
+
+
+  
